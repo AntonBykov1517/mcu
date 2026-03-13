@@ -12,7 +12,6 @@ def read_value(ser):
             continue
 
 def main():
-    # Настройка последовательного порта (ЗАМЕНИТЕ COM3 НА ВАШ ПОРТ!)
     ser = serial.Serial(port='COM7', baudrate=115200, timeout=0.0)
     
     if ser.is_open:
@@ -21,7 +20,6 @@ def main():
         print(f"Port {ser.name} closed")
         return
     
-    # Списки для хранения данных
     measure_temperature_C = []
     measure_voltage_V = []
     measure_ts = []
@@ -30,26 +28,20 @@ def main():
     
     try:
         while True:
-            # Время измерения
             ts = time.time() - start_ts
             
-            # Запрос напряжения
             ser.write("get_adc\n".encode('ascii'))
             voltage_V = read_value(ser)
             
-            # Запрос температуры
             ser.write("get_temp\n".encode('ascii'))
             temp_C = read_value(ser)
             
-            # Сохраняем данные
             measure_ts.append(ts)
             measure_voltage_V.append(voltage_V)
             measure_temperature_C.append(temp_C)
             
-            # Выводим в консоль
             print(f'{voltage_V:.3f} V - {temp_C:.1f}C - {ts:.2f}s')
             
-            # Задержка
             time.sleep(0.1)
             
     except KeyboardInterrupt:
@@ -58,7 +50,6 @@ def main():
         ser.close()
         print("Port closed")
         
-        # Построение графиков
         plt.figure(figsize=(10, 8))
         
         plt.subplot(2, 1, 1)

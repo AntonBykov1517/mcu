@@ -5,24 +5,29 @@ set(PICO_PLATFORM rp2040)
 
 include(pico_sdk_import.cmake)
 
-project(04_dac)
+project(04_bme)
 
 pico_sdk_init()
+
+# Подключаем библиотеку protocol из папки libs
+add_subdirectory("../libs/protocol" "${PROJECT_BINARY_DIR}/protocol")
+# После подключения protocol добавьте:
+add_subdirectory("../libs/bme280-driver" "${PROJECT_BINARY_DIR}/bme280-driver")
 
 add_executable(${PROJECT_NAME}
     main.c
     ${CMAKE_CURRENT_SOURCE_DIR}/stdio-task/stdio-task.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/protocol-task/protocol-task.c
     ${CMAKE_CURRENT_SOURCE_DIR}/led-task/led-task.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/adc-task/adc-task.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/bme280/bme280.c      # добавить
+    # adc-task удалён
 )
 
 target_link_libraries(${PROJECT_NAME}
     pico_stdlib
-    hardware_adc
-    hardware_i2c    # заменили hardware_spi на hardware_i2c
+    protocol
+    bme280_driver
+    hardware_i2c    # добавить для I2C
 )
+
 pico_set_linker_script(${PROJECT_NAME} ${CMAKE_CURRENT_LIST_DIR}/linker_rp2040.ld)
 
 pico_enable_stdio_uart(${PROJECT_NAME} 0)

@@ -4,9 +4,13 @@
 #include "protocol-task/protocol-task.h"
 #include "led-task/led-task.h"
 #include "adc-task/adc-task.h"
+#include "bme280/bme280.h"
 
 #define DEVICE_NAME "my-pico-device"
 #define DEVICE_VRSN "v0.0.1"
+
+// Глобальная переменная для хранения данных BME280
+static bme280_data_t bme_data;
 
 // Прототипы функций
 void version_callback(const char* args);
@@ -19,9 +23,9 @@ void wmem_callback(const char* args);
 void help_callback(const char* args);
 void adc_callback(const char* args);
 void temp_callback(const char* args);
-// Добавить после существующих прототипов
 void tm_start_callback(const char* args);
 void tm_stop_callback(const char* args);
+void bme_callback(const char* args);
 
 // Device API commands array
 api_t device_api[] = {
@@ -34,8 +38,9 @@ api_t device_api[] = {
     {"wmem", wmem_callback, "write memory: wmem <hex_address> <hex_value>"},
     {"get_adc", adc_callback, "read ADC value from GPIO26"},
     {"get_temp", temp_callback, "read internal temperature sensor"},
-    {"tm_start", tm_start_callback, "start telemetry measurement"},  // новая команда
-    {"tm_stop", tm_stop_callback, "stop telemetry measurement"},     // новая команда
+    {"tm_start", tm_start_callback, "start telemetry measurement"},
+    {"tm_stop", tm_stop_callback, "stop telemetry measurement"},
+    {"get_bme", bme_callback, "read BME280 sensor (temp, pressure, humidity)"},
     {"help", help_callback, "show this help message"},
     {NULL, NULL, NULL}
 };
@@ -154,6 +159,19 @@ void tm_stop_callback(const char* args)
     printf("Telemetry stopped\n");
 }
 
+// BME280 callback - read all BME280 sensors
+void bme_callback(const char* args)
+{
+    if (bme280_read_all(&bme_data)) {
+        printf("%.2f %.2f %.2f\n", 
+               bme_data.temperature, 
+               bme_data.pressure, 
+               bme_data.humidity);
+    } else {
+        printf("Error reading BME280\n");
+    }
+}
+
 int main() {
     stdio_init_all();
     
@@ -162,11 +180,23 @@ int main() {
     led_task_init();
     adc_task_init();
     
+    // Инициализация BME280 на I2C0 с пинами 4 (SDA) и 5 (SCL)
+    printf("Initializing BME280...\n");
+    if (bme280_init(i2c0, 4, 5)) {
+        printf("BME280 found! Configuring...\n");
+        bme280_configure(BME280_MODE_NORMAL, 
+                         BME280_OSRS_1, BME280_OSRS_1, BME280_OSRS_1,
+                         BME280_T_SB_1000, BME280_FILTER_OFF);
+        printf("BME280 ready\n");
+    } else {
+        printf("BME280 not found! Check wiring\n");
+    }
+    
     while (1) {
         char* command = stdio_task_handle();
         protocol_task_handle(command);
         led_task_handle();
-        adc_task_handle();  // добавить эту строку
+        adc_task_handle();
     }
     return 0;
 }
